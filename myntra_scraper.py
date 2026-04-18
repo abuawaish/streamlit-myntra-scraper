@@ -3,16 +3,15 @@ import pandas as pd
 import re
 import time
 import plotly.express as px
-import subprocess
-import sys
 from typing import Optional
 from selenium import webdriver
 from selenium.webdriver.common.by import By
-from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import TimeoutException, StaleElementReferenceException, WebDriverException
+from selenium.common.exceptions import TimeoutException, StaleElementReferenceException
+from webdriver_manager.chrome import ChromeDriverManager
 
 # ---------- Page Configuration ----------
 st.set_page_config(
@@ -22,14 +21,16 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# ---------- Custom CSS (same as before) ----------
+# ---------- Custom CSS with Animations ----------
 st.markdown("""
 <style>
     @keyframes fadeIn {
         0% { opacity: 0; transform: translateY(20px); }
         100% { opacity: 1; transform: translateY(0); }
     }
-    .main { animation: fadeIn 0.6s ease-out; }
+    .main {
+        animation: fadeIn 0.6s ease-out;
+    }
     .header-container {
         background: linear-gradient(135deg, #ff3f6c 0%, #ff6b8b 100%);
         padding: 2rem;
@@ -40,8 +41,14 @@ st.markdown("""
         box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         transition: transform 0.3s;
     }
-    .header-container:hover { transform: scale(1.01); }
-    .header-container h1 { font-size: 2.5rem; font-weight: 700; margin-bottom: 0.5rem; }
+    .header-container:hover {
+        transform: scale(1.01);
+    }
+    .header-container h1 {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+    }
     .stButton > button {
         background-color: #ff3f6c;
         color: white;
@@ -61,9 +68,18 @@ st.markdown("""
         border: none;
         transition: all 0.3s;
     }
-    .stDownloadButton > button:hover { transform: translateY(-2px); background-color: #218838; }
-    .dataframe thead tr th { background-color: #ff3f6c; color: white; }
-    .stProgress > div > div { background-color: #ff3f6c; }
+    .stDownloadButton > button:hover {
+        transform: translateY(-2px);
+        background-color: #218838;
+    }
+    .dataframe thead tr th {
+        background-color: #ff3f6c;
+        color: white;
+        font-weight: 600;
+    }
+    .stProgress > div > div {
+        background-color: #ff3f6c;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -73,69 +89,61 @@ if 'scraped_df' not in st.session_state:
 if 'search_performed' not in st.session_state:
     st.session_state.search_performed = False
 
-# ---------- Robust Driver Setup with Error Logging ----------
+# ---------- Fast Scraping Function (Your Optimized Logic) ----------
+@st.cache_resource
 def get_driver():
-    """Configure and return a Chrome driver that works on Streamlit Cloud."""
+    """Configure and return a headless Chrome driver."""
     options = Options()
-    options.add_argument("--headless=new")
+    options.add_argument("--headless")
+    options.add_argument("--disable-gpu")
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
-    options.add_argument("--disable-gpu")
-    options.add_argument("--disable-blink-features=AutomationControlled")
     options.add_argument("--window-size=1920,1080")
-    options.add_argument("--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
-    
-    # Explicit binary location (installed by chromium package)
-    options.binary_location = "/usr/bin/chromium"
-    
-    # Use the system chromedriver (installed by chromium-driver)
-    service = Service(executable_path="/usr/bin/chromedriver")
-    
-    try:
-        driver = webdriver.Chrome(service=service, options=options)
-        return driver
-    except WebDriverException as e:
-        error_msg = f"WebDriverException: {str(e)}"
-        # Log to stderr (appears in Streamlit logs)
-        print(error_msg, file=sys.stderr)
-        # Also try to get Chromium version for debugging
-        try:
-            result = subprocess.run(["/usr/bin/chromium", "--version"], capture_output=True, text=True)
-            print(f"Chromium version: {result.stdout.strip()}", file=sys.stderr)
-            error_msg += f"\nChromium version: {result.stdout.strip()}"
-        except Exception as ver_e:
-            print(f"Could not get Chromium version: {ver_e}", file=sys.stderr)
-        st.error(error_msg)
-        raise  # Re-raise so the calling function knows it failed
+    options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+    service = Service(ChromeDriverManager().install())
+    return webdriver.Chrome(service=service, options=options)
 
-# ---------- Fast Scraping Function ----------
 def scrape_myntra_fast(keyword: str, limit: int) -> Optional[pd.DataFrame]:
+    """
+    Scrape Myntra search results quickly without visiting each product page.
+    Returns a DataFrame with columns: product_type, brand, price, rating, total_rating.
+    """
+    url = "https://www.myntra.com/"
     driver = None
     try:
         driver = get_driver()
+        driver.get(url)
         
-        # Direct search URL
-        search_url = f"https://www.myntra.com/{keyword.replace(' ', '-')}"
-        driver.get(search_url)
+        # Search for the keyword
+        search_box = WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.CLASS_NAME, 'desktop-query'))
+        )
+        search_bar = search_box.find_element(By.CLASS_NAME, 'desktop-searchBar')
+        search_bar.clear()
+        search_bar.send_keys(keyword)
+        search_button = search_box.find_element(By.CLASS_NAME, 'desktop-submit')
+        search_button.click()
         
-        # Wait for products to load (product-base elements)
-        WebDriverWait(driver, 15).until(
-            EC.presence_of_all_elements_located((By.CSS_SELECTOR, 'li.product-base'))
+        # Wait for products to load
+        WebDriverWait(driver, 10).until(
+            EC.presence_of_all_elements_located((By.CLASS_NAME, 'product-base'))
         )
         
-        # --- Product extraction (same as before) ---
         product_type_list = []
         brand_list = []
         price_list = []
         rating_list = []
         total_rating_list = []
         
+        # Progress tracking
         progress_bar = st.progress(0, text="Scraping products...")
         status_text = st.empty()
         
         collected = 0
+        page = 1
         while collected < limit:
-            product_data = driver.find_elements(By.CSS_SELECTOR, 'li.product-base')
+            # Re-fetch product elements (avoid stale references)
+            product_data = driver.find_elements(By.CLASS_NAME, 'product-base')
             if not product_data:
                 break
                 
@@ -143,12 +151,15 @@ def scrape_myntra_fast(keyword: str, limit: int) -> Optional[pd.DataFrame]:
                 if collected >= limit:
                     break
                 try:
+                    # Product type
                     prod_type = data.find_elements(By.CLASS_NAME, 'product-product')
                     product_type_list.append(prod_type[0].text if prod_type else "Unknown")
                     
+                    # Brand
                     brand_name = data.find_elements(By.CLASS_NAME, 'product-brand')
                     brand_list.append(brand_name[0].text if brand_name else "Unknown")
                     
+                    # Price (clean to integer)
                     prod_price = data.find_elements(By.CLASS_NAME, 'product-price')
                     if prod_price:
                         price_text = prod_price[0].text.replace('Rs', '').replace('.', '').strip()
@@ -158,10 +169,12 @@ def scrape_myntra_fast(keyword: str, limit: int) -> Optional[pd.DataFrame]:
                         price = 0
                     price_list.append(price)
                     
+                    # Rating
                     prod_rating = data.find_elements(By.CLASS_NAME, 'product-ratingsContainer')
                     rating = prod_rating[0].text.split('\n')[0] if prod_rating else "No Rating"
                     rating_list.append(rating)
                     
+                    # Total ratings count (e.g., "1.2k", "345")
                     total_rate = data.find_elements(By.CLASS_NAME, 'product-ratingsCount')
                     if total_rate:
                         rate_text = total_rate[0].text.split('\n')
@@ -179,7 +192,7 @@ def scrape_myntra_fast(keyword: str, limit: int) -> Optional[pd.DataFrame]:
             if collected >= limit:
                 break
                 
-            # Pagination
+            # Pagination: click next button
             try:
                 next_button = WebDriverWait(driver, 5).until(
                     EC.element_to_be_clickable((By.CLASS_NAME, 'pagination-next'))
@@ -187,7 +200,8 @@ def scrape_myntra_fast(keyword: str, limit: int) -> Optional[pd.DataFrame]:
                 driver.execute_script("arguments[0].scrollIntoView();", next_button)
                 time.sleep(0.5)
                 driver.execute_script("arguments[0].click();", next_button)
-                time.sleep(2)
+                time.sleep(2)  # Wait for next page to load
+                page += 1
             except TimeoutException:
                 st.info("No more pages available.")
                 break
@@ -195,7 +209,7 @@ def scrape_myntra_fast(keyword: str, limit: int) -> Optional[pd.DataFrame]:
         progress_bar.empty()
         status_text.empty()
         
-        # Build DataFrame and clean (unchanged)
+        # Build DataFrame
         df = pd.DataFrame({
             'product_type': product_type_list,
             'brand': brand_list,
@@ -204,6 +218,7 @@ def scrape_myntra_fast(keyword: str, limit: int) -> Optional[pd.DataFrame]:
             'total_rating': total_rating_list
         })
         
+        # Clean total_rating: convert "1.2k" → 1200, "345" → 345
         def convert_rating_count(s):
             s = str(s).lower().strip()
             if 'k' in s:
@@ -213,19 +228,18 @@ def scrape_myntra_fast(keyword: str, limit: int) -> Optional[pd.DataFrame]:
                 return int(s) if s.isdigit() else 0
         
         df['total_rating'] = df['total_rating'].apply(convert_rating_count)
+        # Clean rating: convert to float, "No Rating" → 0
         df['rating'] = df['rating'].apply(lambda x: float(x) if x.replace('.', '', 1).isdigit() else 0.0)
         
         return df
         
     except Exception as e:
-        st.error(f"Scraping error: {type(e).__name__}: {str(e)}")
-        import traceback
-        traceback.print_exc()
+        st.error(f"Scraping error: {str(e)}")
         return None
     finally:
         if driver:
             driver.quit()
-            
+
 # ---------- UI Layout ----------
 st.markdown("""
 <div class="header-container">
@@ -241,7 +255,7 @@ with st.container():
     with col2:
         limit = st.number_input("📊 Number of Products", min_value=5, max_value=2000, value=100, step=10)
     with col3:
-        st.markdown("<br>", unsafe_allow_html=True)
+        st.markdown("<br>", unsafe_allow_html=True)  # vertical alignment
         search_clicked = st.button("🚀 Start Scraping", width='stretch')
 
 if search_clicked and keyword:
@@ -254,7 +268,7 @@ if search_clicked and keyword:
 if st.session_state.search_performed and st.session_state.scraped_df is not None:
     df = st.session_state.scraped_df
     
-    # Metrics
+    # Key Metrics
     st.markdown("---")
     col1, col2, col3, col4 = st.columns(4)
     with col1:
@@ -270,16 +284,20 @@ if st.session_state.search_performed and st.session_state.scraped_df is not None
         st.metric("🗣️ Total Reviews", f"{total_reviews:,}")
     
     st.markdown("---")
+    
+    # Data Table
     st.subheader("📋 Scraped Data")
     st.dataframe(df, width='stretch', hide_index=True)
     
+    # Download CSV
     csv = df.to_csv(index=False).encode('utf-8')
     st.download_button("📥 Download CSV", data=csv, file_name=f"myntra_{keyword}.csv", mime="text/csv", width='stretch')
     
-    # Visualizations
+    # Interactive Visualizations
     st.markdown("---")
     st.subheader("📊 Data Insights & Visualizations")
     
+    # Plot type selector
     plot_type = st.selectbox(
         "Select chart type",
         options=["Bar Chart (Top Brands)", "Pie Chart (Rating Distribution)", "Line Chart (Price vs Rating)"],
@@ -287,14 +305,17 @@ if st.session_state.search_performed and st.session_state.scraped_df is not None
     )
     
     if plot_type == "Bar Chart (Top Brands)":
+        # Top 10 brands by number of products
         brand_counts = df['brand'].value_counts().head(10).reset_index()
         brand_counts.columns = ['Brand', 'Count']
         fig = px.bar(brand_counts, x='Brand', y='Count', title="Top 10 Brands by Product Count",
-                     color='Count', color_continuous_scale='Viridis')
+                     color='Count', color_continuous_scale='Viridis',
+                     labels={'Count': 'Number of Products'})
         fig.update_layout(showlegend=False, xaxis_tickangle=-45)
         st.plotly_chart(fig, width='stretch')
         
     elif plot_type == "Pie Chart (Rating Distribution)":
+        # Categorize ratings: 0-2, 2-3, 3-4, 4-5
         def rating_category(r):
             if r == 0: return "No Rating"
             elif r < 2: return "Poor (0-2)"
@@ -309,28 +330,31 @@ if st.session_state.search_performed and st.session_state.scraped_df is not None
                      color_discrete_sequence=px.colors.qualitative.Set2)
         st.plotly_chart(fig, width='stretch')
         
-    else:
+    else:  # Line Chart (Price vs Rating)
+        # Group by rating (rounded) and compute average price
         df['rating_rounded'] = df['rating'].round(1)
         price_by_rating = df.groupby('rating_rounded')['price'].mean().reset_index()
         fig = px.line(price_by_rating, x='rating_rounded', y='price',
                       title="Average Price vs Product Rating",
-                      markers=True)
+                      markers=True, labels={'rating_rounded': 'Rating', 'price': 'Average Price (₹)'})
         fig.update_traces(line_color='#ff3f6c', marker_color='#ff3f6c')
         st.plotly_chart(fig, width='stretch')
     
+    # Additional insight: price distribution histogram
     st.subheader("💰 Price Distribution")
     fig_hist = px.histogram(df, x='price', nbins=30, title="Price Range Distribution",
                             labels={'price': 'Price (₹)'}, color_discrete_sequence=['#ff3f6c'])
     fig_hist.update_layout(bargap=0.1)
     st.plotly_chart(fig_hist, width='stretch')
     
+    # Search again button
     if st.button("🔄 Search Again", width='stretch'):
         st.session_state.scraped_df = None
         st.session_state.search_performed = False
         st.rerun()
         
 elif st.session_state.search_performed and st.session_state.scraped_df is None:
-    st.info("💡 No data available. Please try a different keyword or adjust your parameters.")
+    st.info("💡 No data available. Please try a different keyword or increase the limit.")
 
 st.markdown("---")
 st.caption("⚠️ For educational purposes only. Please respect Myntra's robots.txt and terms of service.")
