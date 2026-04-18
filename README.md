@@ -1,4 +1,4 @@
-# 🛍️ Myntra Product Scraper Pro
+# 🛍️ Streamlit Myntra Scraper
 
 [![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://your-app-url.streamlit.app)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
@@ -57,8 +57,8 @@ An **ultra-fast**, interactive web application to scrape product data from Myntr
 
 1. **Clone the repository** (or download the `myntra_scraper.py` file)
    ```bash
-   git clone https://github.com/abuawaish/myntra-scraper-pro.git
-   cd myntra-scraper-pro
+   git clone https://github.com/abuawaish/streamlit-myntra-scraper.git
+   cd streamlit-myntra-scraper
    ```
 
 2. **Install required packages**
@@ -182,6 +182,5 @@ pip install -r requirements.txt
 
 ### 📬 Contact
 - Abu Awaish – [LinkedIn](https://www.linkedin.com/in/abu-awaish-a6523b258/)
-- Project Link: [github](https://github.com/abuawaish/streamlit-myntra-scraper)
 
 ### Happy Scraping! 🛍️📊
