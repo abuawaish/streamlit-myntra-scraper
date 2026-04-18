@@ -110,27 +110,20 @@ def get_driver():
 
 # ---------- Fast Scraping Function ----------
 def scrape_myntra_fast(keyword: str, limit: int) -> Optional[pd.DataFrame]:
-    url = "https://www.myntra.com/"
     driver = None
     try:
         driver = get_driver()
-        driver.get(url)
         
-        # Search for the keyword
-        search_box = WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.CLASS_NAME, 'desktop-query'))
-        )
-        search_bar = search_box.find_element(By.CLASS_NAME, 'desktop-searchBar')
-        search_bar.clear()
-        search_bar.send_keys(keyword)
-        search_button = search_box.find_element(By.CLASS_NAME, 'desktop-submit')
-        search_button.click()
+        # Direct search URL
+        search_url = f"https://www.myntra.com/{keyword.replace(' ', '-')}"
+        driver.get(search_url)
         
-        # Wait for products to load
-        WebDriverWait(driver, 10).until(
-            EC.presence_of_all_elements_located((By.CLASS_NAME, 'product-base'))
+        # Wait for products to load (product-base elements)
+        WebDriverWait(driver, 15).until(
+            EC.presence_of_all_elements_located((By.CSS_SELECTOR, 'li.product-base'))
         )
         
+        # --- Product extraction (same as before) ---
         product_type_list = []
         brand_list = []
         price_list = []
@@ -142,7 +135,7 @@ def scrape_myntra_fast(keyword: str, limit: int) -> Optional[pd.DataFrame]:
         
         collected = 0
         while collected < limit:
-            product_data = driver.find_elements(By.CLASS_NAME, 'product-base')
+            product_data = driver.find_elements(By.CSS_SELECTOR, 'li.product-base')
             if not product_data:
                 break
                 
@@ -186,7 +179,7 @@ def scrape_myntra_fast(keyword: str, limit: int) -> Optional[pd.DataFrame]:
             if collected >= limit:
                 break
                 
-            # Pagination: click next button
+            # Pagination
             try:
                 next_button = WebDriverWait(driver, 5).until(
                     EC.element_to_be_clickable((By.CLASS_NAME, 'pagination-next'))
@@ -202,6 +195,7 @@ def scrape_myntra_fast(keyword: str, limit: int) -> Optional[pd.DataFrame]:
         progress_bar.empty()
         status_text.empty()
         
+        # Build DataFrame and clean (unchanged)
         df = pd.DataFrame({
             'product_type': product_type_list,
             'brand': brand_list,
@@ -224,18 +218,14 @@ def scrape_myntra_fast(keyword: str, limit: int) -> Optional[pd.DataFrame]:
         return df
         
     except Exception as e:
-        error_type = type(e).__name__
-        error_msg = str(e)
-        st.error(f"Scraping error: {error_type}: {error_msg}")
-        # Log full details to console (visible in Streamlit logs)
-        print(f"Full exception: {error_type}: {error_msg}", file=sys.stderr)
+        st.error(f"Scraping error: {type(e).__name__}: {str(e)}")
         import traceback
-        traceback.print_exc(file=sys.stderr)
+        traceback.print_exc()
         return None
     finally:
         if driver:
             driver.quit()
-
+            
 # ---------- UI Layout ----------
 st.markdown("""
 <div class="header-container">
