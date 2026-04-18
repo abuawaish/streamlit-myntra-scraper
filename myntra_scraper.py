@@ -1,4 +1,5 @@
 import streamlit as st
+import subprocess
 import pandas as pd
 import re
 import time
@@ -97,24 +98,38 @@ if 'search_performed' not in st.session_state:
 
 # ---------- Chrome Driver Setup (Works on Streamlit Cloud) ----------
 def get_driver():
-    from selenium.webdriver.chrome.service import Service
+    """Configure and return a Chrome driver with Selenium Manager (auto-downloads matching driver)."""
+    import sys
+    import subprocess
+    import os
     
     options = Options()
     options.add_argument("--headless=new")
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--disable-gpu")
+    options.add_argument("--disable-blink-features=AutomationControlled")
     options.add_argument("--window-size=1920,1080")
     options.add_argument("--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
     
-    # Explicit binary location (optional, but safe)
+    # Optional: explicitly set binary location (if needed)
     options.binary_location = "/usr/bin/chromium"
     
-    # Use the system chromedriver installed by chromium-driver
-    service = Service(executable_path="/usr/bin/chromedriver")
-    
-    driver = webdriver.Chrome(service=service, options=options)
-    return driver
+    try:
+        # Let Selenium Manager handle driver download (no Service needed)
+        driver = webdriver.Chrome(options=options)
+        return driver
+    except Exception as e:
+        # Capture and re-raise with full details
+        error_msg = f"Driver creation failed: {str(e)}"
+        # Try to get Chromium version for debugging
+        try:
+            result = subprocess.run(["/usr/bin/chromium", "--version"], capture_output=True, text=True)
+            error_msg += f"\nChromium version: {result.stdout.strip()}"
+        except:
+            pass
+        st.error(error_msg)
+        raise
 
 # ---------- Fast Scraping Function (Your Optimized Logic) ----------
 def scrape_myntra_fast(keyword: str, limit: int) -> Optional[pd.DataFrame]:
