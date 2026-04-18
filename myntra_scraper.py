@@ -11,14 +11,6 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, StaleElementReferenceException
-import os
-import shutil
-import tempfile
-
-# Clean any previously downloaded drivers (if any)
-cache_dir = os.path.join(tempfile.gettempdir(), ".chromedriver")
-if os.path.exists(cache_dir):
-    shutil.rmtree(cache_dir)
 
 # ---------- Page Configuration ----------
 st.set_page_config(
@@ -117,6 +109,8 @@ def get_driver():
     
     try:
         # Let Selenium Manager handle driver download (no Service needed)
+        import traceback
+        traceback.print_exc()
         driver = webdriver.Chrome(options=options)
         return driver
     except Exception as e:
