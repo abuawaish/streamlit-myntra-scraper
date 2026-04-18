@@ -5,6 +5,8 @@
 
 An **ultra-fast**, interactive web application to scrape product data from Myntra.com using Selenium, visualize insights, and export results as CSV.
 
+![App Header](screenshots/s1.png)
+
 ---
 
 ## ✨ Features
