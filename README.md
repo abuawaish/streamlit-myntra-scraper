@@ -19,6 +19,22 @@ An **ultra-fast**, interactive web application to scrape product data from Myntr
 
 ---
 
+## 🖼️ Screenshots
+
+### 1. Scraping in Progress
+![Scraping Progress](screenshots/s2.png)
+
+### 2. Results Table & Metrics
+![Results Table](screenshots/s3.png)
+
+### 3. Top Brands Bar Chart
+![Bar Chart](screenshots/s4.png)
+
+### 4. Price Distribution Histogram
+![Price Histogram](screenshots/s5.png)
+
+---
+
 ## 🛠️ Technologies Used
 
 | Technology                                                              | Purpose                                 |
