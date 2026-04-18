@@ -10,6 +10,14 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, StaleElementReferenceException
+import os
+import shutil
+import tempfile
+
+# Clean any previously downloaded drivers (if any)
+cache_dir = os.path.join(tempfile.gettempdir(), ".chromedriver")
+if os.path.exists(cache_dir):
+    shutil.rmtree(cache_dir)
 
 # ---------- Page Configuration ----------
 st.set_page_config(
@@ -89,17 +97,25 @@ if 'search_performed' not in st.session_state:
 
 # ---------- Chrome Driver Setup (Works on Streamlit Cloud) ----------
 def get_driver():
-    """Configure and return a Chrome driver using Selenium Manager (no webdriver-manager needed)."""
-    options = Options()
-    options.add_argument("--headless")               # Required for cloud
-    options.add_argument("--disable-gpu")
-    options.add_argument("--no-sandbox")             # Bypass OS security model
-    options.add_argument("--disable-dev-shm-usage")  # Overcome limited resource issues
-    options.add_argument("--window-size=1920,1080")
-    options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+    """Configure and return a Chrome driver that works on Streamlit Cloud."""
+    from selenium.webdriver.chrome.service import Service
     
-    # Selenium 4.27+ automatically downloads the matching ChromeDriver
-    driver = webdriver.Chrome(options=options)
+    options = Options()
+    options.add_argument("--headless=new")        # New headless mode (preferred)
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
+    options.add_argument("--disable-gpu")
+    options.add_argument("--disable-blink-features=AutomationControlled")
+    options.add_argument("--window-size=1920,1080")
+    options.add_argument("--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+    
+    # Explicitly point to the Chromium binary (important on Streamlit Cloud)
+    options.binary_location = "/usr/bin/chromium"
+    
+    # Use Service with explicit path to chromedriver (installed by chromium-driver)
+    service = Service(executable_path="/usr/bin/chromedriver")
+    
+    driver = webdriver.Chrome(service=service, options=options)
     return driver
 
 # ---------- Fast Scraping Function (Your Optimized Logic) ----------
