@@ -11,7 +11,7 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, StaleElementReferenceException
-from webdriver_manager.chrome import ChromeDriverManager
+# from webdriver_manager.chrome import ChromeDriverManager
 
 # ---------- Page Configuration ----------
 st.set_page_config(
@@ -99,7 +99,11 @@ def get_driver():
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--window-size=1920,1080")
     options.add_argument("--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
-    service = Service(ChromeDriverManager().install())
+
+    options.binary_location = "/usr/bin/chromium"
+    service = Service("/usr/bin/chromedriver") 
+    # service = Service(ChromeDriverManager().install())
+
     return webdriver.Chrome(service=service, options=options)
 
 # ---------- Fast Scraping Function ----------
