@@ -1,4 +1,3 @@
-from asyncio import subprocess
 import streamlit as st
 import pandas as pd
 import re
@@ -12,7 +11,7 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, StaleElementReferenceException
-# from webdriver_manager.chrome import ChromeDriverManager
+from webdriver_manager.chrome import ChromeDriverManager
 
 # ---------- Page Configuration ----------
 st.set_page_config(
@@ -97,29 +96,10 @@ def get_driver():
     options.add_argument("--headless")
     options.add_argument("--disable-gpu")
     options.add_argument("--no-sandbox")
-    options.add_argument("--disable-setuid-sandbox")
-    options.add_argument("--no-zygote")
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--window-size=1920,1080")
     options.add_argument("--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
-    options.add_argument("--single-process")
-    options.add_argument("--disable-extensions")
-    options.add_argument("--disable-software-rasterizer")
-    options.add_argument("--ignore-certificate-errors")
-    options.add_argument("--allow-running-insecure-content")
-
-    # ✅ Auto-detect correct binary path
-    try:
-        binary = subprocess.check_output(
-            ["which", "chromium"], text=True
-        ).strip()
-    except:
-        binary = "/usr/bin/chromium"
-
-    options.binary_location = binary
-    service = Service("/usr/bin/chromedriver") 
-    # service = Service(ChromeDriverManager().install())
-
+    service = Service(ChromeDriverManager().install())
     return webdriver.Chrome(service=service, options=options)
 
 # ---------- Fast Scraping Function ----------
