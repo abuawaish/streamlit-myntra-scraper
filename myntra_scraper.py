@@ -1,3 +1,4 @@
+from asyncio import subprocess
 import streamlit as st
 import pandas as pd
 import re
@@ -96,6 +97,8 @@ def get_driver():
     options.add_argument("--headless")
     options.add_argument("--disable-gpu")
     options.add_argument("--no-sandbox")
+    options.add_argument("--disable-setuid-sandbox")
+    options.add_argument("--no-zygote")
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--window-size=1920,1080")
     options.add_argument("--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
@@ -105,7 +108,15 @@ def get_driver():
     options.add_argument("--ignore-certificate-errors")
     options.add_argument("--allow-running-insecure-content")
 
-    options.binary_location = "/usr/bin/chromium"
+    # ✅ Auto-detect correct binary path
+    try:
+        binary = subprocess.check_output(
+            ["which", "chromium"], text=True
+        ).strip()
+    except:
+        binary = "/usr/bin/chromium"
+
+    options.binary_location = binary
     service = Service("/usr/bin/chromedriver") 
     # service = Service(ChromeDriverManager().install())
 
