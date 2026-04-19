@@ -89,7 +89,6 @@ if 'scraped_df' not in st.session_state:
 if 'search_performed' not in st.session_state:
     st.session_state.search_performed = False
 
-# ---------- Fast Scraping Function (Your Optimized Logic) ----------
 @st.cache_resource
 def get_driver():
     """Configure and return a headless Chrome driver."""
@@ -103,6 +102,7 @@ def get_driver():
     service = Service(ChromeDriverManager().install())
     return webdriver.Chrome(service=service, options=options)
 
+# ---------- Fast Scraping Function ----------
 def scrape_myntra_fast(keyword: str, limit: int) -> Optional[pd.DataFrame]:
     """
     Scrape Myntra search results quickly without visiting each product page.
