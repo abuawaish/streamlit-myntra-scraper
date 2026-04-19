@@ -157,8 +157,8 @@ An **ultra-fast**, interactive web application to scrape product data from Myntr
 streamlit-myntra-scraper/
 ├── myntra_scraper.py          # Main application
 ├── requirements.txt           # Dependencies
-├── .gitignore                 # exclude files or directories 
-├──  package.txt               # System Dependencies
+├──.gitignore                 # exclude files or directories 
+├── packages.txt              # System Dependencies
 └── README.md                  # This file
 ```
 
