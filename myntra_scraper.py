@@ -91,27 +91,19 @@ if 'search_performed' not in st.session_state:
 
 @st.cache_resource
 def get_driver():
-    """Configure and return a headless Chrome driver specifically for Streamlit Cloud."""
     options = Options()
-    
-    # 1. Point to the specific Chromium binary installed by packages.txt
-    # This is the "map" Selenium needs to find the browser on a Linux server
+    # 1. Point to the EXACT location of the browser on the server
     options.binary_location = "/usr/bin/chromium"
     
-    options.add_argument("--headless")
-    options.add_argument("--disable-gpu")
+    # 2. Essential flags for a server environment
+    options.add_argument("--headless=new") # Modern headless mode
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
-    options.add_argument("--window-size=1920,1080")
+    options.add_argument("--disable-gpu")
     
-    # Keeping your User-Agent to help bypass Myntra's bot detection
-    options.add_argument("--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
-    
-    # 2. Bypass ChromeDriverManager and point directly to the system driver
-    # service = Service(ChromeDriverManager().install())
-    # Since packages.txt installs 'chromium-driver', it lives at this path:
+    # 3. Point to the EXACT location of the driver
     service = Service("/usr/bin/chromedriver")
-    
+    # service = Service(ChromeDriverManager().install())
     return webdriver.Chrome(service=service, options=options)
 
 # ---------- Fast Scraping Function ----------
