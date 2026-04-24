@@ -89,7 +89,6 @@ if 'scraped_df' not in st.session_state:
 if 'search_performed' not in st.session_state:
     st.session_state.search_performed = False
 
-@st.cache_resource
 def get_driver():
     """Configure and return a headless Chrome driver."""
 
@@ -103,7 +102,8 @@ def get_driver():
     options.add_argument("--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
     service = Service(ChromeDriverManager().install())
 
-    return webdriver.Chrome(service=service, options=options)
+    driver = webdriver.Chrome(service=service, options=options)
+    return driver
 
 # ---------- Fast Scraping Function ----------
 def scrape_myntra_fast(keyword: str, limit: int) -> Optional[pd.DataFrame]:
@@ -137,6 +137,7 @@ def scrape_myntra_fast(keyword: str, limit: int) -> Optional[pd.DataFrame]:
         price_list = []
         rating_list = []
         total_rating_list = []
+        product_url_list = []
         
         # Progress tracking
         progress_bar = st.progress(0, text="Scraping products...")
@@ -154,6 +155,15 @@ def scrape_myntra_fast(keyword: str, limit: int) -> Optional[pd.DataFrame]:
                 if collected >= limit:
                     break
                 try:
+                    # Extract product URL
+                    link_elem = data.find_element(By.CSS_SELECTOR, 'a')
+                    relative_url = link_elem.get_attribute('href')
+                    if relative_url:
+                        product_url = relative_url if relative_url.startswith('http') else f"https://www.myntra.com{relative_url}"
+                    else:
+                        product_url = "N/A"
+                    product_url_list.append(product_url)
+
                     # Product type
                     prod_type = data.find_elements(By.CLASS_NAME, 'product-product')
                     product_type_list.append(prod_type[0].text if prod_type else "Unknown")
@@ -218,7 +228,8 @@ def scrape_myntra_fast(keyword: str, limit: int) -> Optional[pd.DataFrame]:
             'brand': brand_list,
             'price': price_list,
             'rating': rating_list,
-            'total_rating': total_rating_list
+            'total_rating': total_rating_list,
+            'product_url': product_url_list
         })
         
         # Clean total_rating: convert "1.2k" → 1200, "345" → 345
@@ -237,11 +248,12 @@ def scrape_myntra_fast(keyword: str, limit: int) -> Optional[pd.DataFrame]:
         return df
         
     except Exception as e:
-        st.error(f"Scraping error: {str(e)}")
+        st.error(f"Scraping error: {type(e).__name__}: {str(e)}")
         return None
     finally:
         if driver:
             driver.quit()
+            time.sleep(1)
 
 # ---------- UI Layout ----------
 st.markdown("""
@@ -270,6 +282,9 @@ if search_clicked and keyword:
 # ---------- Results & Visualizations ----------
 if st.session_state.search_performed and st.session_state.scraped_df is not None:
     df = st.session_state.scraped_df
+
+    # Keep the product_url column – we'll turn it into a link column
+    display_df = df.copy()
     
     # Key Metrics
     st.markdown("---")
@@ -290,7 +305,20 @@ if st.session_state.search_performed and st.session_state.scraped_df is not None
     
     # Data Table
     st.subheader("📋 Scraped Data")
-    st.dataframe(df, width='stretch', hide_index=True)
+
+    # Use LinkColumn to display clickable links with custom text
+    st.dataframe(
+        display_df,
+        column_config={
+            "product_url": st.column_config.LinkColumn(
+                "product_url",
+                display_text="🔗 navigate_to_product",   # <-- this is the clickable label
+                help="Click to open product page"
+            )
+        },
+        hide_index=True,
+        width='stretch'
+    )
     
     # Download CSV
     csv = df.to_csv(index=False).encode('utf-8')
