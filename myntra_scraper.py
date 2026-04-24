@@ -11,7 +11,7 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, StaleElementReferenceException
-# from webdriver_manager.chrome import ChromeDriverManager
+from webdriver_manager.chrome import ChromeDriverManager
 
 # ---------- Page Configuration ----------
 st.set_page_config(
@@ -91,30 +91,18 @@ if 'search_performed' not in st.session_state:
 
 @st.cache_resource
 def get_driver():
-    """Final stable configuration for Streamlit Cloud."""
+    """Configure and return a headless Chrome driver."""
+
     options = Options()
-    
-    # Point to the binaries installed by your packages.txt
-    options.binary_location = "/usr/bin/chromium"
-    
-    # 1. CORE HEADLESS SETTINGS
-    options.add_argument("--headless=new")
-    options.add_argument("--no-sandbox")
-    options.add_argument("--disable-dev-shm-usage") # CRITICAL: Prevents 'shm' memory crashes
+
+    options.add_argument("--headless")
     options.add_argument("--disable-gpu")
-    
-    # 2. STABILITY SETTINGS (Add these now)
-    options.add_argument("--disable-extensions")
-    options.add_argument("--disable-infobars")
-    options.add_argument("--remote-debugging-port=9222") # Helps Selenium maintain connection
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--window-size=1920,1080")
-    
-    # 3. BOT BYPASS (Keeping your User-Agent)
     options.add_argument("--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
-    
-    # Using the driver installed by packages.txt
-    service = Service("/usr/bin/chromedriver")
-    
+    service = Service(ChromeDriverManager().install())
+
     return webdriver.Chrome(service=service, options=options)
 
 # ---------- Fast Scraping Function ----------
@@ -128,9 +116,6 @@ def scrape_myntra_fast(keyword: str, limit: int) -> Optional[pd.DataFrame]:
     try:
         driver = get_driver()
         driver.get(url)
-
-        # Give the Cloud server 3 seconds to render the JavaScript
-        time.sleep(3)
         
         # Search for the keyword
         search_box = WebDriverWait(driver, 10).until(
