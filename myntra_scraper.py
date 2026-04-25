@@ -278,6 +278,8 @@ if search_clicked and keyword:
     with st.spinner("Initializing scraper..."):
         df = scrape_myntra_fast(keyword.strip(), limit)
         st.session_state.scraped_df = df
+else:
+    st.info("💡 Enter a product keyword and click 'Start Scraping' to begin.")
 
 # ---------- Results & Visualizations ----------
 if st.session_state.search_performed and st.session_state.scraped_df is not None:
