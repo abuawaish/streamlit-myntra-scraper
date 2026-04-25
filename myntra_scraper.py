@@ -324,7 +324,7 @@ if st.session_state.search_performed and st.session_state.scraped_df is not None
     
     # Download CSV
     csv = df.to_csv(index=False).encode('utf-8')
-    st.download_button("📥 Download CSV", data=csv, file_name=f"myntra_{keyword}.csv", mime="text/csv", width='stretch')
+    st.download_button("📥 Download CSV", data=csv, file_name=f"myntra_{keyword.strip().replace(' ', '_')}.csv", mime="text/csv", width='stretch')
     
     # Interactive Visualizations
     st.markdown("---")
